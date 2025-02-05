@@ -12,15 +12,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let message = exception.message || 'Internal server error';
 
     if (exception instanceof Prisma.PrismaClientKnownRequestError) {
-      if (exception.code === 'P2002') {
-        status = HttpStatus.CONFLICT;
-        const target = (exception.meta as any)?.target?.join(', ') || 'field';
-        const model = (exception.meta as any)?.modelName || 'model';
-        message = `A ${model.toLowerCase()} with that ${target} already exists.`;
+      switch (exception.code) {
+        case'P2002':
+          status = HttpStatus.CONFLICT;
+          message = `A ${modelOf(exception)} with that ${(fieldsOf(exception))} already exists.`;
+          break;
+        case'P2025':
+          status = HttpStatus.NOT_FOUND;
+          message = `A ${modelOf(exception)} not found`;
       }
 
       return response.status(status).json({
-        statusCode: status,
         message,
         path: request.url,
       });
@@ -31,7 +33,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
       return response
         .status(status)
         .json({
-          statusCode: status,
           message: 'Bad request, validation failed',
           errors: exception.response?.message || exception.message,
           path: request.url,
@@ -42,9 +43,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
     return response
       .status(status)
       .json({
-        statusCode: status,
         message: exception.message || 'Internal server error',
         path: request.url,
       });
   }
+}
+
+function modelOf(exception: any): string {
+  return ((exception.meta as any)?.modelName || 'model').toLowerCase();
+}
+
+function fieldsOf(exception: any): string {
+  return (exception.meta as any)?.target?.join(', ') || 'field';
 }

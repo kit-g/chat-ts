@@ -23,3 +23,24 @@ model User {
 
   @@map("users") // Renames the table in the database
 }
+
+model Room {
+  id         String    @id @default(uuid())
+  name       String
+  created_at DateTime  @default(now()) @db.Timestamptz(3)
+  updated_at DateTime  @updatedAt @db.Timestamptz(3)
+  messages   Message[] // One-to-many relationship to Message
+
+  @@map("rooms")
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  content    String
+  created_at DateTime @default(now()) @db.Timestamptz(3)
+  updated_at DateTime @updatedAt @db.Timestamptz(3)
+  room_id    String
+  room       Room     @relation(fields: [room_id], references: [id])
+
+  @@map("messages")
+}
